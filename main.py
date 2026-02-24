@@ -646,3 +646,57 @@ class TestAlchemistLabState(unittest.TestCase):
                 [5000],
                 TREASURY_ADDRESS,
             )
+
+
+class TestEncoding(unittest.TestCase):
+    def test_formula_hash_deterministic(self) -> None:
+        h1 = formula_hash_from_string("lead_to_gold")
+        h2 = formula_hash_from_string("lead_to_gold")
+        self.assertEqual(h1, h2)
+
+    def test_vessel_id_unique(self) -> None:
+        v1 = vessel_id_from_string("alpha")
+        v2 = vessel_id_from_string("beta")
+        self.assertNotEqual(v1, v2)
+
+    def test_transmute_id_unique(self) -> None:
+        vid = vessel_id_from_string("v")
+        t1 = transmute_id_raw(1, 100, 0, TREASURY_ADDRESS, vid, 1, 1000, 0xAAA)
+        t2 = transmute_id_raw(1, 100, 1, TREASURY_ADDRESS, vid, 1, 1000, 0xAAA)
+        self.assertNotEqual(t1, t2)
+
+
+# -----------------------------------------------------------------------------
+# Event log parsing (EVM log data to Python structs)
+# -----------------------------------------------------------------------------
+
+def parse_uint256_from_hex(hex_str: str) -> int:
+    raw = hex_str.replace(HEX_PREFIX, "").strip()
+    if not raw:
+        return 0
+    return int(raw, 16)
+
+
+def parse_address_from_hex(hex_str: str) -> str:
+    raw = hex_str.replace(HEX_PREFIX, "").strip()
+    return HEX_PREFIX + raw.zfill(40)[-40:].lower()
+
+
+def parse_bytes32_from_hex(hex_str: str) -> bytes:
+    raw = hex_str.replace(HEX_PREFIX, "").strip()
+    return bytes.fromhex(raw.zfill(64)[-64:])
+
+
+def parse_recipe_inscribed_log(topics: List[str], data: str) -> Dict[str, Any]:
+    if len(topics) < 2:
+        return {}
+    recipe_id = parse_uint256_from_hex(topics[1])
+    if len(data) >= 128:
+        formula_hash = parse_bytes32_from_hex(data[2:66])
+        min_reagent_wei = parse_uint256_from_hex(data[66:130])
+        yield_bps = parse_uint256_from_hex(data[130:194])
+        at_block = parse_uint256_from_hex(data[194:258]) if len(data) >= 258 else 0
+    else:
+        formula_hash = b""
+        min_reagent_wei = yield_bps = at_block = 0
+    return {
