@@ -106,3 +106,57 @@ class ALCH_ZeroRecipes(AlchemistError):
     pass
 
 
+class ALCH_VesselNotFound(AlchemistError):
+    pass
+
+
+class ALCH_InvalidYieldBps(AlchemistError):
+    pass
+
+
+class ALCH_InvalidFormula(AlchemistError):
+    pass
+
+
+# -----------------------------------------------------------------------------
+# Enums and data structures
+# -----------------------------------------------------------------------------
+
+class TransmuteStatus(IntEnum):
+    PENDING = 0
+    RESOLVED = 1
+    FAILED = 2
+
+
+@dataclass
+class RecipeRecord:
+    formula_hash: bytes
+    min_reagent_wei: int
+    yield_bps: int
+    inscribed_at_block: int
+    active: bool
+    recipe_id: int = 0
+
+
+@dataclass
+class VesselRecord:
+    vessel_id: bytes
+    balance_wei: int
+    label_hash: bytes
+    created_at_block: int
+
+
+@dataclass
+class TransmuteSnapshot:
+    transmute_id: bytes
+    beneficiary: str
+    recipe_id: int
+    reagent_wei: int
+    yield_wei: int
+    fee_wei: int
+    at_block: int
+
+
+@dataclass
+class LabConfig:
+    crucible: str = CRUCIBLE_ADDRESS
