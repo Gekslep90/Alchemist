@@ -214,3 +214,57 @@ def formula_hash_from_string(s: str) -> bytes:
 
 
 def vessel_id_from_string(s: str) -> bytes:
+    return keccak256_bytes(("Alchemist_Vessel_" + s).encode("utf-8"))
+
+
+def transmute_id_raw(
+    chain_id: int,
+    block_number: int,
+    sequence: int,
+    beneficiary: str,
+    vessel_id: bytes,
+    recipe_id: int,
+    reagent_wei: int,
+    prevrandao: int,
+) -> bytes:
+    ben = bytes.fromhex(beneficiary.replace(HEX_PREFIX, "").zfill(40))
+    data = b"Alchemist_Transmute"
+    data += struct.pack(">Q", chain_id)
+    data += struct.pack(">Q", block_number)
+    data += struct.pack(">Q", sequence)
+    data += ben
+    data += vessel_id
+    data += struct.pack(">Q", recipe_id)
+    data += struct.pack(">Q", reagent_wei)
+    data += struct.pack(">Q", prevrandao)
+    return keccak256_bytes(data)
+
+
+# -----------------------------------------------------------------------------
+# In-memory lab state (simulator)
+# -----------------------------------------------------------------------------
+
+class AlchemistLabState:
+    """In-memory simulation of Alchemist contract state and rules."""
+
+    def __init__(self, config: Optional[LabConfig] = None):
+        self.config = config or LabConfig()
+        self.recipe_counter = 0
+        self.transmute_sequence = 0
+        self.lab_paused = False
+        self._recipes: Dict[int, RecipeRecord] = {}
+        self._recipe_ids: List[int] = []
+        self._vessels: Dict[bytes, VesselRecord] = {}
+        self._vessel_ids: List[bytes] = []
+        self._transmutes: Dict[bytes, TransmuteSnapshot] = {}
+        self._recipe_transmute_count: Dict[int, int] = {}
+        self._recipe_volume_wei: Dict[int, int] = {}
+        self._crucible_balance = 0
+        self._block_number = self.config.deployed_block or 1
+        self._prevrandao = 0x1234567890ABCDEF
+
+    def set_block(self, block_number: int, prevrandao: Optional[int] = None) -> None:
+        self._block_number = block_number
+        if prevrandao is not None:
+            self._prevrandao = prevrandao
+
