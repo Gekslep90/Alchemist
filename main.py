@@ -376,3 +376,57 @@ class AlchemistLabState:
             raise ALCH_InvalidFeeBps()
         self.config.fee_bps = new_fee_bps
 
+    def set_lab_paused(self, paused: bool) -> None:
+        self.lab_paused = paused
+
+    def get_recipe(self, recipe_id: int) -> RecipeRecord:
+        if recipe_id not in self._recipes:
+            raise ALCH_RecipeNotFound()
+        return self._recipes[recipe_id]
+
+    def get_vessel(self, vessel_id: bytes) -> VesselRecord:
+        if vessel_id not in self._vessels:
+            raise ALCH_VesselNotFound()
+        return self._vessels[vessel_id]
+
+    def get_recipe_ids(self) -> List[int]:
+        return list(self._recipe_ids)
+
+    def get_vessel_ids(self) -> List[bytes]:
+        return list(self._vessel_ids)
+
+    def get_transmute(self, transmute_id: bytes) -> TransmuteSnapshot:
+        if transmute_id not in self._transmutes:
+            raise KeyError("Transmute not found")
+        return self._transmutes[transmute_id]
+
+
+# -----------------------------------------------------------------------------
+# Yield and fee calculations (pure)
+# -----------------------------------------------------------------------------
+
+def compute_yield_wei(reagent_wei: int, yield_bps: int) -> int:
+    if not (ALCH_MIN_YIELD_BPS <= yield_bps <= ALCH_MAX_YIELD_BPS):
+        raise ALCH_InvalidYieldBps()
+    return (reagent_wei * yield_bps) // ALCH_BPS_BASE
+
+
+def compute_fee_wei(yield_wei: int, fee_bps: int) -> int:
+    if fee_bps > ALCH_MAX_FEE_BPS:
+        raise ALCH_InvalidFeeBps()
+    return (yield_wei * fee_bps) // ALCH_BPS_BASE
+
+
+def compute_net_wei(yield_wei: int, fee_wei: int) -> int:
+    return yield_wei - fee_wei
+
+
+# -----------------------------------------------------------------------------
+# ABI encoding helpers (minimal, for calldata construction)
+# -----------------------------------------------------------------------------
+
+def abi_encode_uint256(value: int) -> str:
+    h = hex(value)[2:].replace("L", "").zfill(64)
+    return HEX_PREFIX + h
+
+
