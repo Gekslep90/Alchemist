@@ -700,3 +700,57 @@ def parse_recipe_inscribed_log(topics: List[str], data: str) -> Dict[str, Any]:
         formula_hash = b""
         min_reagent_wei = yield_bps = at_block = 0
     return {
+        "recipeId": recipe_id,
+        "formulaHash": formula_hash,
+        "minReagentWei": min_reagent_wei,
+        "yieldBps": yield_bps,
+        "atBlock": at_block,
+    }
+
+
+def parse_reagent_deposited_log(topics: List[str], data: str) -> Dict[str, Any]:
+    if len(topics) < 3:
+        return {}
+    depositor = parse_address_from_hex(topics[1])
+    vessel_id = parse_bytes32_from_hex(topics[2])
+    amount_wei = parse_uint256_from_hex(data[2:66]) if len(data) >= 66 else 0
+    at_block = parse_uint256_from_hex(data[66:130]) if len(data) >= 130 else 0
+    return {
+        "depositor": depositor,
+        "vesselId": vessel_id,
+        "amountWei": amount_wei,
+        "atBlock": at_block,
+    }
+
+
+def parse_transmutation_resolved_log(topics: List[str], data: str) -> Dict[str, Any]:
+    if len(topics) < 2:
+        return {}
+    transmute_id = parse_bytes32_from_hex(topics[1])
+    if len(data) >= 258:
+        beneficiary = parse_address_from_hex(data[2:66])
+        recipe_id = parse_uint256_from_hex(data[66:130])
+        reagent_wei = parse_uint256_from_hex(data[130:194])
+        yield_wei = parse_uint256_from_hex(data[194:258])
+        fee_wei = parse_uint256_from_hex(data[258:322]) if len(data) >= 322 else 0
+        at_block = parse_uint256_from_hex(data[322:386]) if len(data) >= 386 else 0
+    else:
+        beneficiary = ZERO_ADDRESS
+        recipe_id = reagent_wei = yield_wei = fee_wei = at_block = 0
+    return {
+        "transmuteId": transmute_id,
+        "beneficiary": beneficiary,
+        "recipeId": recipe_id,
+        "reagentWei": reagent_wei,
+        "yieldWei": yield_wei,
+        "feeWei": fee_wei,
+        "atBlock": at_block,
+    }
+
+
+def parse_lab_pause_toggled(data: str) -> Dict[str, Any]:
+    paused = False
+    if len(data) >= 66:
+        raw = data[2:66].strip()
+        if raw:
+            paused = parse_uint256_from_hex(raw) != 0
