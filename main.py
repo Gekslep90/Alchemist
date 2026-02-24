@@ -268,3 +268,57 @@ class AlchemistLabState:
         if prevrandao is not None:
             self._prevrandao = prevrandao
 
+    def inscribe_recipe(
+        self,
+        formula_hash: bytes,
+        min_reagent_wei: int,
+        yield_bps: int,
+        caller: str,
+    ) -> int:
+        if formula_hash == bytes(32):
+            raise ALCH_InvalidFormula()
+        if not (ALCH_MIN_YIELD_BPS <= yield_bps <= ALCH_MAX_YIELD_BPS):
+            raise ALCH_InvalidYieldBps()
+        if self.recipe_counter >= ALCH_MAX_RECIPES:
+            raise ALCH_MaxRecipesReached()
+        self.recipe_counter += 1
+        recipe_id = self.recipe_counter
+        self._recipes[recipe_id] = RecipeRecord(
+            formula_hash=formula_hash,
+            min_reagent_wei=min_reagent_wei,
+            yield_bps=yield_bps,
+            inscribed_at_block=self._block_number,
+            active=True,
+            recipe_id=recipe_id,
+        )
+        self._recipe_ids.append(recipe_id)
+        self._recipe_transmute_count[recipe_id] = 0
+        self._recipe_volume_wei[recipe_id] = 0
+        return recipe_id
+
+    def toggle_recipe(self, recipe_id: int, active: bool, caller: str) -> None:
+        if recipe_id not in self._recipes:
+            raise ALCH_RecipeNotFound()
+        self._recipes[recipe_id].active = active
+
+    def deposit_reagent(
+        self,
+        vessel_id: bytes,
+        amount_wei: int,
+        label_hash: bytes,
+        depositor: str,
+    ) -> None:
+        if amount_wei == 0:
+            raise ALCH_ZeroAmount()
+        if self.lab_paused:
+            raise ALCH_LabPaused()
+        if vessel_id not in self._vessels:
+            self._vessels[vessel_id] = VesselRecord(
+                vessel_id=vessel_id,
+                balance_wei=0,
+                label_hash=label_hash,
+                created_at_block=self._block_number,
+            )
+            self._vessel_ids.append(vessel_id)
+        self._vessels[vessel_id].balance_wei += amount_wei
+
