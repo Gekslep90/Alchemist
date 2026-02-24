@@ -322,3 +322,57 @@ class AlchemistLabState:
             self._vessel_ids.append(vessel_id)
         self._vessels[vessel_id].balance_wei += amount_wei
 
+    def resolve_transmutation(
+        self,
+        beneficiary: str,
+        vessel_id: bytes,
+        recipe_id: int,
+        reagent_wei: int,
+        keeper: str,
+    ) -> Tuple[bytes, int, int]:
+        if keeper != self.config.lab_keeper:
+            raise ALCH_NotKeeper()
+        if beneficiary == ZERO_ADDRESS or not beneficiary:
+            raise ALCH_ZeroAddress()
+        if recipe_id not in self._recipes:
+            raise ALCH_RecipeNotFound()
+        rec = self._recipes[recipe_id]
+        if not rec.active:
+            raise ALCH_RecipeInactive()
+        if reagent_wei < rec.min_reagent_wei:
+            raise ALCH_InsufficientReagent()
+        if vessel_id not in self._vessels or self._vessels[vessel_id].balance_wei < reagent_wei:
+            raise ALCH_InsufficientReagent()
+
+        self._vessels[vessel_id].balance_wei -= reagent_wei
+        yield_wei = (reagent_wei * rec.yield_bps) // ALCH_BPS_BASE
+        fee_wei = (yield_wei * self.config.fee_bps) // ALCH_BPS_BASE
+        transmute_id = transmute_id_raw(
+            chain_id=1,
+            block_number=self._block_number,
+            sequence=self.transmute_sequence,
+            beneficiary=address_from_hex(beneficiary),
+            vessel_id=vessel_id,
+            recipe_id=recipe_id,
+            reagent_wei=reagent_wei,
+            prevrandao=self._prevrandao,
+        )
+        self.transmute_sequence += 1
+        self._transmutes[transmute_id] = TransmuteSnapshot(
+            transmute_id=transmute_id,
+            beneficiary=beneficiary,
+            recipe_id=recipe_id,
+            reagent_wei=reagent_wei,
+            yield_wei=yield_wei,
+            fee_wei=fee_wei,
+            at_block=self._block_number,
+        )
+        self._recipe_transmute_count[recipe_id] += 1
+        self._recipe_volume_wei[recipe_id] += reagent_wei
+        return transmute_id, yield_wei, fee_wei
+
+    def set_fee_bps(self, new_fee_bps: int) -> None:
+        if new_fee_bps > ALCH_MAX_FEE_BPS:
+            raise ALCH_InvalidFeeBps()
+        self.config.fee_bps = new_fee_bps
+
