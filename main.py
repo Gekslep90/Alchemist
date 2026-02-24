@@ -160,3 +160,57 @@ class TransmuteSnapshot:
 @dataclass
 class LabConfig:
     crucible: str = CRUCIBLE_ADDRESS
+    treasury: str = TREASURY_ADDRESS
+    lab_keeper: str = LAB_KEEPER_ADDRESS
+    fee_bps: int = 8
+    deployed_block: int = 0
+
+
+# -----------------------------------------------------------------------------
+# Hashing and encoding (EVM-compatible)
+# -----------------------------------------------------------------------------
+
+def keccak256_hex(data: bytes) -> str:
+    """Return keccak256 hash as 0x-prefixed hex. Use py-evm or eth_hash if available."""
+    try:
+        from eth_hash.auto import keccak
+        h = keccak(data)
+    except ImportError:
+        h = hashlib.sha3_256(data).digest() if hashlib.sha3_256 else hashlib.sha256(data).digest()
+    return HEX_PREFIX + h.hex()
+
+
+def keccak256_bytes(data: bytes) -> bytes:
+    try:
+        from eth_hash.auto import keccak
+        return keccak(data)
+    except ImportError:
+        h = hashlib.sha3_256(data).digest() if hashlib.sha3_256 else hashlib.sha256(data).digest()
+        return h
+
+
+def bytes32_from_hex(s: str) -> bytes:
+    raw = s.replace(HEX_PREFIX, "").lower()
+    if len(raw) != 64:
+        raw = raw.zfill(64)[-64:]
+    return bytes.fromhex(raw)
+
+
+def bytes32_to_hex(b: bytes) -> str:
+    if len(b) > 32:
+        b = b[-32:]
+    return HEX_PREFIX + b.hex().rjust(64, "0")
+
+
+def address_from_hex(s: str) -> str:
+    raw = s.replace(HEX_PREFIX, "").lower()
+    if len(raw) != 40:
+        raw = raw.zfill(40)[-40:]
+    return HEX_PREFIX + raw
+
+
+def formula_hash_from_string(s: str) -> bytes:
+    return keccak256_bytes(s.encode("utf-8"))
+
+
+def vessel_id_from_string(s: str) -> bytes:
