@@ -430,3 +430,57 @@ def abi_encode_uint256(value: int) -> str:
     return HEX_PREFIX + h
 
 
+def abi_encode_address(addr: str) -> str:
+    raw = addr.replace(HEX_PREFIX, "").lower().zfill(40)[-40:]
+    return HEX_PREFIX + raw.zfill(64)
+
+def abi_encode_bytes32(b: bytes) -> str:
+    if len(b) > 32:
+        b = b[-32:]
+    return HEX_PREFIX + b.hex().rjust(64, "0")
+
+
+def abi_encode_bytes32_string(s: str) -> str:
+    h = formula_hash_from_string(s)
+    return abi_encode_bytes32(h)
+
+
+# -----------------------------------------------------------------------------
+# Contract ABI (minimal selectors and signatures)
+# -----------------------------------------------------------------------------
+
+ALCHEMIST_ABI_SELECTORS = {
+    "inscribeRecipe(bytes32,uint256,uint256)": "0xa1b2c3d4",
+    "toggleRecipe(uint256,bool)": "0xb2c3d4e5",
+    "depositReagent(bytes32,bytes32)": "0xc3d4e5f6",
+    "resolveTransmutation(address,bytes32,uint256,uint256)": "0xd4e5f6a7",
+    "withdrawCrucible(uint256)": "0xe5f6a7b8",
+    "setLabPaused(bool)": "0xf6a7b8c9",
+    "setFeeBps(uint256)": "0xa7b8c9d0",
+    "getRecipe(uint256)": "0xb8c9d0e1",
+    "getVessel(bytes32)": "0xc9d0e1f2",
+    "getRecipeIds()": "0xd0e1f2a3",
+    "getVesselIds()": "0xe1f2a3b4",
+}
+
+
+def get_selector(signature: str) -> str:
+    sig_bytes = signature.encode("utf-8")
+    return keccak256_hex(sig_bytes)[:10]
+
+
+# -----------------------------------------------------------------------------
+# Event topic hashes (for log parsing)
+# -----------------------------------------------------------------------------
+
+def event_topic(event_signature: str) -> str:
+    return keccak256_hex(event_signature.encode("utf-8"))
+
+
+ALCHEMIST_EVENT_TOPICS = {
+    "RecipeInscribed(uint256,bytes32,uint256,uint256,uint256)": event_topic("RecipeInscribed(uint256,bytes32,uint256,uint256,uint256)"),
+    "RecipeToggled(uint256,bool,uint256)": event_topic("RecipeToggled(uint256,bool,uint256)"),
+    "ReagentDeposited(address,bytes32,uint256,uint256)": event_topic("ReagentDeposited(address,bytes32,uint256,uint256)"),
+    "TransmutationResolved(bytes32,address,uint256,uint256,uint256,uint256,uint256)": event_topic(
+        "TransmutationResolved(bytes32,address,uint256,uint256,uint256,uint256,uint256)"
+    ),
