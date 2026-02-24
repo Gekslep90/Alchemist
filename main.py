@@ -592,3 +592,57 @@ class TestAlchemistLabState(unittest.TestCase):
     def test_resolve_transmutation(self) -> None:
         fh = formula_hash_from_string("silver")
         rid = self.state.inscribe_recipe(fh, 1_000_000, 8000, TREASURY_ADDRESS)
+        vid = vessel_id_from_string("v1")
+        self.state.deposit_reagent(vid, 10_000_000, bytes(32), TREASURY_ADDRESS)
+        tid, yw, fw = self.state.resolve_transmutation(
+            "0x2222222222222222222222222222222222222222",
+            vid,
+            rid,
+            2_000_000,
+            LAB_KEEPER_ADDRESS,
+        )
+        self.assertEqual(yw, 2_000_000 * 8000 // ALCH_BPS_BASE)
+        self.assertEqual(fw, yw * 8 // ALCH_BPS_BASE)
+        v = self.state.get_vessel(vid)
+        self.assertEqual(v.balance_wei, 8_000_000)
+
+    def test_resolve_transmutation_not_keeper(self) -> None:
+        fh = formula_hash_from_string("x")
+        rid = self.state.inscribe_recipe(fh, 100, 9000, TREASURY_ADDRESS)
+        vid = vessel_id_from_string("v2")
+        self.state.deposit_reagent(vid, 1000, bytes(32), TREASURY_ADDRESS)
+        with self.assertRaises(ALCH_NotKeeper):
+            self.state.resolve_transmutation(TREASURY_ADDRESS, vid, rid, 500, TREASURY_ADDRESS)
+
+    def test_resolve_insufficient_reagent(self) -> None:
+        fh = formula_hash_from_string("y")
+        rid = self.state.inscribe_recipe(fh, 5_000_000, 7000, TREASURY_ADDRESS)
+        vid = vessel_id_from_string("v3")
+        self.state.deposit_reagent(vid, 1_000_000, bytes(32), TREASURY_ADDRESS)
+        with self.assertRaises(ALCH_InsufficientReagent):
+            self.state.resolve_transmutation(TREASURY_ADDRESS, vid, rid, 3_000_000, LAB_KEEPER_ADDRESS)
+
+    def test_compute_yield_fee(self) -> None:
+        y = compute_yield_wei(1_000_000, 8000)
+        self.assertEqual(y, 800_000)
+        f = compute_fee_wei(y, 8)
+        self.assertEqual(f, 640)
+        self.assertEqual(compute_net_wei(y, f), 799_360)
+
+    def test_batch_inscribe(self) -> None:
+        fhs = [formula_hash_from_string(f"r{i}") for i in range(3)]
+        mins = [100, 200, 300]
+        bps = [5000, 7500, 10000]
+        rids = batch_inscribe_recipes(self.state, fhs, mins, bps, TREASURY_ADDRESS)
+        self.assertEqual(rids, [1, 2, 3])
+        self.assertEqual(self.state.recipe_counter, 3)
+
+    def test_batch_inscribe_length_mismatch(self) -> None:
+        with self.assertRaises(ALCH_ArrayLengthMismatch):
+            batch_inscribe_recipes(
+                self.state,
+                [formula_hash_from_string("a")],
+                [1, 2],
+                [5000],
+                TREASURY_ADDRESS,
+            )
