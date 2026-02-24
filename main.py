@@ -52,3 +52,57 @@ class AlchemistError(Exception):
 
 class ALCH_ZeroAddress(AlchemistError):
     pass
+
+
+class ALCH_ZeroAmount(AlchemistError):
+    pass
+
+
+class ALCH_LabPaused(AlchemistError):
+    pass
+
+
+class ALCH_RecipeNotFound(AlchemistError):
+    pass
+
+
+class ALCH_RecipeInactive(AlchemistError):
+    pass
+
+
+class ALCH_InvalidFeeBps(AlchemistError):
+    pass
+
+
+class ALCH_TransferFailed(AlchemistError):
+    pass
+
+
+class ALCH_NotKeeper(AlchemistError):
+    pass
+
+
+class ALCH_MaxRecipesReached(AlchemistError):
+    pass
+
+
+class ALCH_RecipeAlreadyExists(AlchemistError):
+    pass
+
+
+class ALCH_InsufficientReagent(AlchemistError):
+    pass
+
+
+class ALCH_ArrayLengthMismatch(AlchemistError):
+    pass
+
+
+class ALCH_BatchTooLarge(AlchemistError):
+    pass
+
+
+class ALCH_ZeroRecipes(AlchemistError):
+    pass
+
+
