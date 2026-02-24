@@ -538,3 +538,57 @@ DEPLOYMENT_NETWORKS = {
     "optimism": {"chain_id": 10, "rpc_env": "OPTIMISM_RPC_URL"},
 }
 
+
+def get_rpc_url(network: str) -> str:
+    info = DEPLOYMENT_NETWORKS.get(network, DEPLOYMENT_NETWORKS["mainnet"])
+    return os.environ.get(info["rpc_env"], "https://eth.llamarpc.com")
+
+
+# -----------------------------------------------------------------------------
+# Unit tests
+# -----------------------------------------------------------------------------
+
+class TestAlchemistLabState(unittest.TestCase):
+    def setUp(self) -> None:
+        self.config = LabConfig(
+            crucible=CRUCIBLE_ADDRESS,
+            treasury=TREASURY_ADDRESS,
+            lab_keeper=LAB_KEEPER_ADDRESS,
+            fee_bps=8,
+            deployed_block=1000,
+        )
+        self.state = AlchemistLabState(self.config)
+        self.state.set_block(1001, 0xABCD)
+
+    def test_inscribe_recipe(self) -> None:
+        fh = formula_hash_from_string("lead_to_gold")
+        rid = self.state.inscribe_recipe(fh, 1_000_000, 8000, TREASURY_ADDRESS)
+        self.assertEqual(rid, 1)
+        rec = self.state.get_recipe(1)
+        self.assertTrue(rec.active)
+        self.assertEqual(rec.yield_bps, 8000)
+        self.assertEqual(rec.min_reagent_wei, 1_000_000)
+
+    def test_inscribe_recipe_invalid_yield(self) -> None:
+        fh = formula_hash_from_string("bad")
+        with self.assertRaises(ALCH_InvalidYieldBps):
+            self.state.inscribe_recipe(fh, 0, 4000, TREASURY_ADDRESS)
+        with self.assertRaises(ALCH_InvalidYieldBps):
+            self.state.inscribe_recipe(fh, 0, 10001, TREASURY_ADDRESS)
+
+    def test_deposit_reagent(self) -> None:
+        vid = vessel_id_from_string("vessel_alpha")
+        label = formula_hash_from_string("alpha")
+        self.state.deposit_reagent(vid, 5_000_000, label, "0x1111111111111111111111111111111111111111")
+        v = self.state.get_vessel(vid)
+        self.assertEqual(v.balance_wei, 5_000_000)
+
+    def test_deposit_zero_raises(self) -> None:
+        vid = vessel_id_from_string("vessel_beta")
+        label = bytes(32)
+        with self.assertRaises(ALCH_ZeroAmount):
+            self.state.deposit_reagent(vid, 0, label, TREASURY_ADDRESS)
+
+    def test_resolve_transmutation(self) -> None:
+        fh = formula_hash_from_string("silver")
+        rid = self.state.inscribe_recipe(fh, 1_000_000, 8000, TREASURY_ADDRESS)
