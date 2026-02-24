@@ -754,3 +754,57 @@ def parse_lab_pause_toggled(data: str) -> Dict[str, Any]:
         raw = data[2:66].strip()
         if raw:
             paused = parse_uint256_from_hex(raw) != 0
+    return {"paused": paused}
+
+
+def parse_fee_bps_updated(data: str) -> Dict[str, Any]:
+    prev = new = at_block = 0
+    if len(data) >= 194:
+        prev = parse_uint256_from_hex(data[2:66])
+        new = parse_uint256_from_hex(data[66:130])
+        at_block = parse_uint256_from_hex(data[130:194])
+    return {"previousBps": prev, "newBps": new, "atBlock": at_block}
+
+
+# -----------------------------------------------------------------------------
+# Full ABI JSON (stub for deployment tools)
+# -----------------------------------------------------------------------------
+
+ALCHEMIST_ABI_JSON = [
+    {
+        "type": "constructor",
+        "inputs": [],
+        "stateMutability": "nonpayable",
+    },
+    {
+        "type": "function",
+        "name": "inscribeRecipe",
+        "inputs": [
+            {"name": "formulaHash", "type": "bytes32", "internalType": "bytes32"},
+            {"name": "minReagentWei", "type": "uint256", "internalType": "uint256"},
+            {"name": "yieldBps", "type": "uint256", "internalType": "uint256"},
+        ],
+        "outputs": [{"name": "recipeId", "type": "uint256", "internalType": "uint256"}],
+        "stateMutability": "nonpayable",
+    },
+    {
+        "type": "function",
+        "name": "toggleRecipe",
+        "inputs": [
+            {"name": "recipeId", "type": "uint256", "internalType": "uint256"},
+            {"name": "active", "type": "bool", "internalType": "bool"},
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable",
+    },
+    {
+        "type": "function",
+        "name": "depositReagent",
+        "inputs": [
+            {"name": "vesselId", "type": "bytes32", "internalType": "bytes32"},
+            {"name": "labelHash", "type": "bytes32", "internalType": "bytes32"},
+        ],
+        "outputs": [],
+        "stateMutability": "payable",
+    },
+    {
