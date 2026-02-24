@@ -484,3 +484,57 @@ ALCHEMIST_EVENT_TOPICS = {
     "TransmutationResolved(bytes32,address,uint256,uint256,uint256,uint256,uint256)": event_topic(
         "TransmutationResolved(bytes32,address,uint256,uint256,uint256,uint256,uint256)"
     ),
+    "CrucibleWithdrawn(address,uint256,uint256)": event_topic("CrucibleWithdrawn(address,uint256,uint256)"),
+    "LabPauseToggled(bool)": event_topic("LabPauseToggled(bool)"),
+    "FeeBpsUpdated(uint256,uint256,uint256)": event_topic("FeeBpsUpdated(uint256,uint256,uint256)"),
+}
+
+
+# -----------------------------------------------------------------------------
+# Batch inscribe simulation
+# -----------------------------------------------------------------------------
+
+def batch_inscribe_recipes(
+    state: AlchemistLabState,
+    formula_hashes: List[bytes],
+    min_reagent_weis: List[int],
+    yield_bps_list: List[int],
+    caller: str,
+) -> List[int]:
+    n = len(formula_hashes)
+    if n != len(min_reagent_weis) or n != len(yield_bps_list):
+        raise ALCH_ArrayLengthMismatch()
+    if n == 0:
+        raise ALCH_ZeroRecipes()
+    if n > ALCH_MAX_BATCH_INSCRIBE:
+        raise ALCH_BatchTooLarge()
+    if state.recipe_counter + n > ALCH_MAX_RECIPES:
+        raise ALCH_MaxRecipesReached()
+    recipe_ids = []
+    for i in range(n):
+        if formula_hashes[i] == bytes(32):
+            raise ALCH_InvalidFormula()
+        if not (ALCH_MIN_YIELD_BPS <= yield_bps_list[i] <= ALCH_MAX_YIELD_BPS):
+            raise ALCH_InvalidYieldBps()
+        rid = state.inscribe_recipe(
+            formula_hash=formula_hashes[i],
+            min_reagent_wei=min_reagent_weis[i],
+            yield_bps=yield_bps_list[i],
+            caller=caller,
+        )
+        recipe_ids.append(rid)
+    return recipe_ids
+
+
+# -----------------------------------------------------------------------------
+# Deployment config (for script usage)
+# -----------------------------------------------------------------------------
+
+DEPLOYMENT_NETWORKS = {
+    "mainnet": {"chain_id": 1, "rpc_env": "ETH_RPC_URL"},
+    "sepolia": {"chain_id": 11155111, "rpc_env": "SEPOLIA_RPC_URL"},
+    "base": {"chain_id": 8453, "rpc_env": "BASE_RPC_URL"},
+    "arbitrum": {"chain_id": 42161, "rpc_env": "ARBITRUM_RPC_URL"},
+    "optimism": {"chain_id": 10, "rpc_env": "OPTIMISM_RPC_URL"},
+}
+
