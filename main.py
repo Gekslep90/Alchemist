@@ -1078,3 +1078,57 @@ def run_extended_simulation(
 
 class TestEventParsing(unittest.TestCase):
     def test_parse_uint256(self) -> None:
+        self.assertEqual(parse_uint256_from_hex("0x00"), 0)
+        self.assertEqual(parse_uint256_from_hex("0x0a"), 10)
+        self.assertEqual(parse_uint256_from_hex("0x" + "f" * 64), 2 ** 256 - 1)
+
+    def test_parse_address(self) -> None:
+        a = parse_address_from_hex("0x" + "1" * 40)
+        self.assertTrue(a.startswith(HEX_PREFIX))
+        self.assertEqual(len(a), 42)
+
+    def test_parse_bytes32(self) -> None:
+        b = parse_bytes32_from_hex("0x" + "ab" * 32)
+        self.assertEqual(len(b), 32)
+
+
+class TestValidation(unittest.TestCase):
+    def test_validate_recipe_params(self) -> None:
+        fh = formula_hash_from_string("ok")
+        errs = validate_recipe_params(fh, 100, 5000)
+        self.assertEqual(errs, [])
+        errs = validate_recipe_params(fh, 100, 4000)
+        self.assertTrue(any("yieldBps" in e for e in errs))
+
+    def test_validate_fee_bps(self) -> None:
+        self.assertEqual(validate_fee_bps(100), [])
+        self.assertTrue(len(validate_fee_bps(300)) > 0)
+
+    def test_validate_address(self) -> None:
+        self.assertEqual(validate_address("0x" + "1" * 40), [])
+        self.assertTrue(len(validate_address("0x123")) > 0)
+
+
+class TestExtendedSimulation(unittest.TestCase):
+    def test_run_extended_simulation(self) -> None:
+        res = run_extended_simulation(num_recipes=3, num_vessels=4, deposits_per_vessel=2, transmutes_per_recipe=1)
+        self.assertIn("recipeCount", res)
+        self.assertGreaterEqual(res["recipeCount"], 1)
+        self.assertIn("vessels", res)
+
+
+class TestCalldataBuilder(unittest.TestCase):
+    def test_build_inscribe_calldata(self) -> None:
+        fh = formula_hash_from_string("test")
+        cd = build_inscribe_recipe_calldata(fh, 1000, 8000)
+        self.assertTrue(cd.startswith(HEX_PREFIX))
+        self.assertGreater(len(cd), 10)
+
+    def test_build_set_lab_paused(self) -> None:
+        cd = build_set_lab_paused_calldata(True)
+        self.assertIn("01", cd)
+
+
+# -----------------------------------------------------------------------------
+# Gas estimation stubs (return constants; real implementation would use RPC)
+# -----------------------------------------------------------------------------
