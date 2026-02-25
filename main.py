@@ -970,3 +970,57 @@ def build_set_lab_paused_calldata(paused: bool) -> str:
 # -----------------------------------------------------------------------------
 
 def validate_recipe_params(formula_hash: bytes, min_reagent_wei: int, yield_bps: int) -> List[str]:
+    errs = []
+    if formula_hash == bytes(32) or len(formula_hash) != 32:
+        errs.append("formulaHash must be 32 bytes and non-zero")
+    if yield_bps < ALCH_MIN_YIELD_BPS or yield_bps > ALCH_MAX_YIELD_BPS:
+        errs.append("yieldBps must be between %s and %s" % (ALCH_MIN_YIELD_BPS, ALCH_MAX_YIELD_BPS))
+    return errs
+
+
+def validate_fee_bps(fee_bps: int) -> List[str]:
+    errs = []
+    if fee_bps > ALCH_MAX_FEE_BPS:
+        errs.append("feeBps must be <= %s" % ALCH_MAX_FEE_BPS)
+    return errs
+
+
+def validate_address(addr: str) -> List[str]:
+    errs = []
+    raw = addr.replace(HEX_PREFIX, "").strip()
+    if len(raw) != 40:
+        errs.append("address must be 40 hex chars")
+    if not re.match(r"^[0-9a-fA-F]+$", raw):
+        errs.append("address must be hex")
+    return errs
+
+
+def validate_vessel_id(vessel_id: bytes) -> List[str]:
+    errs = []
+    if len(vessel_id) != 32:
+        errs.append("vesselId must be 32 bytes")
+    return errs
+
+
+# -----------------------------------------------------------------------------
+# Extended simulation (multi-user, multi-recipe)
+# -----------------------------------------------------------------------------
+
+def run_extended_simulation(
+    num_recipes: int = 5,
+    num_vessels: int = 10,
+    deposits_per_vessel: int = 3,
+    transmutes_per_recipe: int = 2,
+) -> Dict[str, Any]:
+    config = LabConfig(deployed_block=2000, fee_bps=10)
+    state = AlchemistLabState(config)
+    state.set_block(2001, 0xDEADBEEF)
+    results = {"recipes": [], "vessels": [], "transmutes": [], "errors": []}
+
+    for i in range(num_recipes):
+        try:
+            fh = formula_hash_from_string("ext_sim_recipe_%s" % i)
+            min_r = (i + 1) * 100_000
+            ybp = ALCH_MIN_YIELD_BPS + (i * 1000) % (ALCH_MAX_YIELD_BPS - ALCH_MIN_YIELD_BPS + 1)
+            rid = state.inscribe_recipe(fh, min_r, ybp, TREASURY_ADDRESS)
+            results["recipes"].append({"recipeId": rid, "minReagentWei": min_r, "yieldBps": ybp})
