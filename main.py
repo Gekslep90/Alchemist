@@ -1024,3 +1024,57 @@ def run_extended_simulation(
             ybp = ALCH_MIN_YIELD_BPS + (i * 1000) % (ALCH_MAX_YIELD_BPS - ALCH_MIN_YIELD_BPS + 1)
             rid = state.inscribe_recipe(fh, min_r, ybp, TREASURY_ADDRESS)
             results["recipes"].append({"recipeId": rid, "minReagentWei": min_r, "yieldBps": ybp})
+        except Exception as e:
+            results["errors"].append("inscribe %s: %s" % (i, e))
+
+    vessel_ids = []
+    for i in range(num_vessels):
+        vid = vessel_id_from_string("ext_sim_vessel_%s" % i)
+        vessel_ids.append(vid)
+        label = formula_hash_from_string("label_%s" % i)
+        for j in range(deposits_per_vessel):
+            try:
+                state.deposit_reagent(vid, (i + 1) * 50_000 * (j + 1), label, "0x%040x" % (i * 1000 + j))
+            except Exception as e:
+                results["errors"].append("deposit vessel %s j %s: %s" % (i, j, e))
+        v = state.get_vessel(vid)
+        results["vessels"].append({"vesselId": bytes32_to_hex(vid), "balanceWei": v.balance_wei})
+
+    recipe_ids = state.get_recipe_ids()
+    for rid in recipe_ids[: min(len(recipe_ids), transmutes_per_recipe * 2)]:
+        rec = state.get_recipe(rid)
+        for vi, vid in enumerate(vessel_ids):
+            if vi % 2 != 0:
+                continue
+            try:
+                v = state.get_vessel(vid)
+                if v.balance_wei >= rec.min_reagent_wei:
+                    amt = rec.min_reagent_wei
+                    tid, yw, fw = state.resolve_transmutation(
+                        "0x%040x" % (rid * 100 + vi),
+                        vid,
+                        rid,
+                        amt,
+                        LAB_KEEPER_ADDRESS,
+                    )
+                    results["transmutes"].append({
+                        "transmuteId": bytes32_to_hex(tid),
+                        "recipeId": rid,
+                        "yieldWei": yw,
+                        "feeWei": fw,
+                    })
+                    break
+            except Exception as e:
+                results["errors"].append("resolve rid %s vid %s: %s" % (rid, vi, e))
+
+    results["recipeCount"] = state.recipe_counter
+    results["vesselCount"] = len(state.get_vessel_ids())
+    return results
+
+
+# -----------------------------------------------------------------------------
+# More unit tests (edge cases and batch)
+# -----------------------------------------------------------------------------
+
+class TestEventParsing(unittest.TestCase):
+    def test_parse_uint256(self) -> None:
