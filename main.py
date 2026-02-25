@@ -1240,3 +1240,34 @@ def main() -> int:
         runner = unittest.TextTestRunner(verbosity=2)
         result = runner.run(suite)
         return 0 if result.wasSuccessful() else 1
+
+    if args.simulate:
+        config = LabConfig(deployed_block=1000)
+        state = AlchemistLabState(config)
+        state.set_block(1001)
+        fh = formula_hash_from_string("sim_recipe")
+        rid = state.inscribe_recipe(fh, 100_000, 8500, TREASURY_ADDRESS)
+        vid = vessel_id_from_string("sim_vessel")
+        state.deposit_reagent(vid, 1_000_000, bytes(32), "0xDeADBeEf00000000000000000000000000000001")
+        tid, yw, fw = state.resolve_transmutation(
+            "0xDeADBeEf00000000000000000000000000000001",
+            vid,
+            rid,
+            500_000,
+            LAB_KEEPER_ADDRESS,
+        )
+        print("Simulation OK: recipe_id=%s vessel_balance=%s yield_wei=%s fee_wei=%s" % (
+            rid,
+            state.get_vessel(vid).balance_wei,
+            yw,
+            fw,
+        ))
+        return 0
+
+    print("Alchemist module. Use --test or --simulate.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main() or 0)
+
