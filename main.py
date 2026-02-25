@@ -862,3 +862,57 @@ ALCHEMIST_ABI_JSON = [
         "name": "getVessel",
         "inputs": [{"name": "vesselId", "type": "bytes32", "internalType": "bytes32"}],
         "outputs": [
+            {"name": "balanceWei", "type": "uint256", "internalType": "uint256"},
+            {"name": "labelHash", "type": "bytes32", "internalType": "bytes32"},
+            {"name": "createdAtBlock", "type": "uint256", "internalType": "uint256"},
+        ],
+        "stateMutability": "view",
+    },
+    {
+        "type": "function",
+        "name": "getRecipeIds",
+        "inputs": [],
+        "outputs": [{"name": "", "type": "uint256[]", "internalType": "uint256[]"}],
+        "stateMutability": "view",
+    },
+    {
+        "type": "function",
+        "name": "getVesselIds",
+        "inputs": [],
+        "outputs": [{"name": "", "type": "bytes32[]", "internalType": "bytes32[]"}],
+        "stateMutability": "view",
+    },
+    {
+        "type": "event",
+        "name": "RecipeInscribed",
+        "inputs": [
+            {"name": "recipeId", "type": "uint256", "indexed": True},
+            {"name": "formulaHash", "type": "bytes32", "indexed": False},
+            {"name": "minReagentWei", "type": "uint256", "indexed": False},
+            {"name": "yieldBps", "type": "uint256", "indexed": False},
+            {"name": "atBlock", "type": "uint256", "indexed": False},
+        ],
+    },
+    {
+        "type": "event",
+        "name": "TransmutationResolved",
+        "inputs": [
+            {"name": "transmuteId", "type": "bytes32", "indexed": True},
+            {"name": "beneficiary", "type": "address", "indexed": True},
+            {"name": "recipeId", "type": "uint256", "indexed": True},
+            {"name": "reagentWei", "type": "uint256", "indexed": False},
+            {"name": "yieldWei", "type": "uint256", "indexed": False},
+            {"name": "feeWei", "type": "uint256", "indexed": False},
+            {"name": "atBlock", "type": "uint256", "indexed": False},
+        ],
+    },
+]
+
+
+def get_abi_function(name: str) -> Optional[Dict[str, Any]]:
+    for item in ALCHEMIST_ABI_JSON:
+        if item.get("type") == "function" and item.get("name") == name:
+            return item
+    return None
+
+
