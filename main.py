@@ -1132,3 +1132,57 @@ class TestCalldataBuilder(unittest.TestCase):
 # -----------------------------------------------------------------------------
 # Gas estimation stubs (return constants; real implementation would use RPC)
 # -----------------------------------------------------------------------------
+
+GAS_ESTIMATE_INSCRIBE = 150_000
+GAS_ESTIMATE_TOGGLE = 50_000
+GAS_ESTIMATE_DEPOSIT = 80_000
+GAS_ESTIMATE_RESOLVE = 120_000
+GAS_ESTIMATE_WITHDRAW = 60_000
+GAS_ESTIMATE_SET_FEE = 45_000
+GAS_ESTIMATE_SET_PAUSE = 45_000
+
+
+def estimate_gas_for_inscribe() -> int:
+    return GAS_ESTIMATE_INSCRIBE
+
+
+def estimate_gas_for_deposit() -> int:
+    return GAS_ESTIMATE_DEPOSIT
+
+
+def estimate_gas_for_resolve() -> int:
+    return GAS_ESTIMATE_RESOLVE
+
+
+# -----------------------------------------------------------------------------
+# Config file loader (JSON)
+# -----------------------------------------------------------------------------
+
+def load_config_from_json(path: str) -> LabConfig:
+    with open(path, "r") as f:
+        data = json.load(f)
+    return LabConfig(
+        crucible=data.get("crucible", CRUCIBLE_ADDRESS),
+        treasury=data.get("treasury", TREASURY_ADDRESS),
+        lab_keeper=data.get("labKeeper", LAB_KEEPER_ADDRESS),
+        fee_bps=int(data.get("feeBps", 8)),
+        deployed_block=int(data.get("deployedBlock", 0)),
+    )
+
+
+def save_config_to_json(config: LabConfig, path: str) -> None:
+    data = {
+        "crucible": config.crucible,
+        "treasury": config.treasury,
+        "labKeeper": config.lab_keeper,
+        "feeBps": config.fee_bps,
+        "deployedBlock": config.deployed_block,
+    }
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+# -----------------------------------------------------------------------------
+# Recipe name registry (off-chain label -> formula hash)
+# -----------------------------------------------------------------------------
+
