@@ -916,3 +916,57 @@ def get_abi_function(name: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def get_abi_events() -> List[Dict[str, Any]]:
+    return [item for item in ALCHEMIST_ABI_JSON if item.get("type") == "event"]
+
+
+# -----------------------------------------------------------------------------
+# Deployment transaction builder (no RPC, just encoding hints)
+# -----------------------------------------------------------------------------
+
+def build_inscribe_recipe_calldata(formula_hash: bytes, min_reagent_wei: int, yield_bps: int) -> str:
+    """Return 0x + 4-byte selector + ABI-encoded args. Caller must use real ABI encoder for production."""
+    sel = get_selector("inscribeRecipe(bytes32,uint256,uint256)")
+    fh_hex = abi_encode_bytes32(formula_hash)
+    min_hex = abi_encode_uint256(min_reagent_wei)
+    ybp_hex = abi_encode_uint256(yield_bps)
+    return sel + fh_hex[2:] + min_hex[2:] + ybp_hex[2:]
+
+
+def build_deposit_reagent_calldata(vessel_id: bytes, label_hash: bytes) -> str:
+    sel = get_selector("depositReagent(bytes32,bytes32)")
+    v_hex = abi_encode_bytes32(vessel_id)
+    l_hex = abi_encode_bytes32(label_hash)
+    return sel + v_hex[2:] + l_hex[2:]
+
+
+def build_resolve_transmutation_calldata(
+    beneficiary: str,
+    vessel_id: bytes,
+    recipe_id: int,
+    reagent_wei: int,
+) -> str:
+    sel = get_selector("resolveTransmutation(address,bytes32,uint256,uint256)")
+    b_hex = abi_encode_address(beneficiary)
+    v_hex = abi_encode_bytes32(vessel_id)
+    r_hex = abi_encode_uint256(recipe_id)
+    w_hex = abi_encode_uint256(reagent_wei)
+    return sel + b_hex[2:] + v_hex[2:] + r_hex[2:] + w_hex[2:]
+
+
+def build_set_fee_bps_calldata(new_fee_bps: int) -> str:
+    sel = get_selector("setFeeBps(uint256)")
+    return sel + abi_encode_uint256(new_fee_bps)[2:]
+
+
+def build_set_lab_paused_calldata(paused: bool) -> str:
+    sel = get_selector("setLabPaused(bool)")
+    val = "01" if paused else "00"
+    return sel + val.zfill(64)
+
+
+# -----------------------------------------------------------------------------
+# Validation helpers (pre-submit checks)
+# -----------------------------------------------------------------------------
+
+def validate_recipe_params(formula_hash: bytes, min_reagent_wei: int, yield_bps: int) -> List[str]:
