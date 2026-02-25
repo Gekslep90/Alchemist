@@ -1186,3 +1186,57 @@ def save_config_to_json(config: LabConfig, path: str) -> None:
 # Recipe name registry (off-chain label -> formula hash)
 # -----------------------------------------------------------------------------
 
+RECIPE_REGISTRY: Dict[str, bytes] = {}
+
+
+def register_recipe_name(name: str, formula: Optional[str] = None) -> bytes:
+    s = formula if formula is not None else name
+    h = formula_hash_from_string(s)
+    RECIPE_REGISTRY[name] = h
+    return h
+
+
+def get_recipe_formula_hash(name: str) -> bytes:
+    if name in RECIPE_REGISTRY:
+        return RECIPE_REGISTRY[name]
+    return formula_hash_from_string(name)
+
+
+# -----------------------------------------------------------------------------
+# Vessel name registry
+# -----------------------------------------------------------------------------
+
+VESSEL_REGISTRY: Dict[str, bytes] = {}
+
+
+def register_vessel_name(name: str) -> bytes:
+    vid = vessel_id_from_string(name)
+    VESSEL_REGISTRY[name] = vid
+    return vid
+
+
+def get_vessel_id(name: str) -> bytes:
+    if name in VESSEL_REGISTRY:
+        return VESSEL_REGISTRY[name]
+    return vessel_id_from_string(name)
+
+
+# -----------------------------------------------------------------------------
+# CLI entrypoint
+# -----------------------------------------------------------------------------
+
+def main() -> int:
+    import argparse
+    parser = argparse.ArgumentParser(description="Alchemist contract logic CLI")
+    parser.add_argument("--test", action="store_true", help="Run unit tests")
+    parser.add_argument("--simulate", action="store_true", help="Run a short simulation")
+    parser.add_argument("--network", default="mainnet", choices=list(DEPLOYMENT_NETWORKS))
+    args = parser.parse_args()
+
+    if args.test:
+        loader = unittest.TestLoader()
+        suite = unittest.TestSuite()
+        suite.addTests(loader.loadTestsFromModule(sys.modules[__name__]))
+        runner = unittest.TextTestRunner(verbosity=2)
+        result = runner.run(suite)
+        return 0 if result.wasSuccessful() else 1
