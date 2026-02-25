@@ -808,3 +808,57 @@ ALCHEMIST_ABI_JSON = [
         "stateMutability": "payable",
     },
     {
+        "type": "function",
+        "name": "resolveTransmutation",
+        "inputs": [
+            {"name": "beneficiary", "type": "address", "internalType": "address"},
+            {"name": "vesselId", "type": "bytes32", "internalType": "bytes32"},
+            {"name": "recipeId", "type": "uint256", "internalType": "uint256"},
+            {"name": "reagentWei", "type": "uint256", "internalType": "uint256"},
+        ],
+        "outputs": [
+            {"name": "transmuteId", "type": "bytes32", "internalType": "bytes32"},
+            {"name": "yieldWei", "type": "uint256", "internalType": "uint256"},
+            {"name": "feeWei", "type": "uint256", "internalType": "uint256"},
+        ],
+        "stateMutability": "nonpayable",
+    },
+    {
+        "type": "function",
+        "name": "withdrawCrucible",
+        "inputs": [{"name": "amountWei", "type": "uint256", "internalType": "uint256"}],
+        "outputs": [],
+        "stateMutability": "nonpayable",
+    },
+    {
+        "type": "function",
+        "name": "setLabPaused",
+        "inputs": [{"name": "paused", "type": "bool", "internalType": "bool"}],
+        "outputs": [],
+        "stateMutability": "nonpayable",
+    },
+    {
+        "type": "function",
+        "name": "setFeeBps",
+        "inputs": [{"name": "newFeeBps", "type": "uint256", "internalType": "uint256"}],
+        "outputs": [],
+        "stateMutability": "nonpayable",
+    },
+    {
+        "type": "function",
+        "name": "getRecipe",
+        "inputs": [{"name": "recipeId", "type": "uint256", "internalType": "uint256"}],
+        "outputs": [
+            {"name": "formulaHash", "type": "bytes32", "internalType": "bytes32"},
+            {"name": "minReagentWei", "type": "uint256", "internalType": "uint256"},
+            {"name": "yieldBps", "type": "uint256", "internalType": "uint256"},
+            {"name": "inscribedAtBlock", "type": "uint256", "internalType": "uint256"},
+            {"name": "active", "type": "bool", "internalType": "bool"},
+        ],
+        "stateMutability": "view",
+    },
+    {
+        "type": "function",
+        "name": "getVessel",
+        "inputs": [{"name": "vesselId", "type": "bytes32", "internalType": "bytes32"}],
+        "outputs": [
